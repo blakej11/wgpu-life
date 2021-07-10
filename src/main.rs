@@ -1,4 +1,7 @@
-use rand::distributions::{Distribution, Uniform};
+use rand::{
+    distributions::{Distribution, Uniform},
+    SeedableRng,
+};
 
 mod framework;
 
@@ -46,18 +49,28 @@ impl framework::Example for LifeProg {
         let texture = Texture::new(&device, dim, wgpu::TextureFormat::R32Float);
 
         // Initialize the life algorithm.
-        let life = Life::new(&device, dim, &params, &texture);
+        let mut life = Life::new(&device, dim, &params, &texture);
 
         // Set the initial state for all cells in the life grid.
         life.import(&device, &queue, {
             let mut cell_data : Vec<f32> = Vec::new();
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rngs::StdRng::seed_from_u64(42);
             let unif = Uniform::new_inclusive(0.0, 1.0);
             for _ in 0..ncells {
                 cell_data.push(unif.sample(&mut rng));
             }
             cell_data
         });
+
+        // Step the algorithm a few times, so the initial image looks Life-like.
+        let mut command_encoder =
+            device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: None
+            });
+        for _ in 0..100 {
+            life.step(&mut command_encoder);
+        }
+        queue.submit(Some(command_encoder.finish()));
 
         // Initialize the vertex and fragment shaders.
         let renderer = Renderer::new(&sc_desc, &device, &params, &texture);
@@ -126,4 +139,18 @@ impl framework::Example for LifeProg {
 /// run example
 fn main() {
     framework::run::<LifeProg>("life");
+}
+
+#[test]
+fn life() {
+    framework::test::<Example>(framework::FrameworkRefTest {
+        image_path: "/examples/life/screenshot.png",
+        width: 1024,
+        height: 768,
+        optional_features: wgpu::Features::default(),
+        base_test_parameters: framework::test_common::TestParameters::default()
+            .downlevel_flags(wgpu::DownlevelFlags::COMPUTE_SHADERS),
+        tolerance: 0,
+        max_outliers: 0,
+    });
 }

@@ -1,8 +1,8 @@
 use std::mem;
 use std::convert::TryInto;
 use std::marker::PhantomData;
-use futures::executor::block_on;
 use std::fmt::Debug;
+use pollster::block_on;
 use bytemuck::Pod;
 
 pub struct DebugBuffer<T> {
