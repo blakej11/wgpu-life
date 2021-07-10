@@ -1,9 +1,10 @@
+// #[path = "../framework.rs"]
+mod framework;
+
 use rand::{
     distributions::{Distribution, Uniform},
     SeedableRng,
 };
-
-mod framework;
 
 mod debug_buffer;
 mod dimensions;
@@ -143,7 +144,7 @@ fn main() {
 
 #[test]
 fn life() {
-    framework::test::<Example>(framework::FrameworkRefTest {
+    framework::test::<LifeProg>(framework::FrameworkRefTest {
         image_path: "/examples/life/screenshot.png",
         width: 1024,
         height: 768,
