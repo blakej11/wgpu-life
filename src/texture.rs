@@ -1,6 +1,4 @@
-use crate::{
-    dimensions::Dimensions,
-};
+use crate::dimensions::Dimensions;
 
 pub struct Texture {
     texture_view: wgpu::TextureView,
@@ -8,11 +6,7 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn new(
-        device: &wgpu::Device,
-        dimensions: Dimensions,
-        format: wgpu::TextureFormat,
-    ) -> Self {
+    pub fn new(device: &wgpu::Device, dimensions: Dimensions, format: wgpu::TextureFormat) -> Self {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
@@ -23,8 +17,9 @@ impl Texture {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
+            view_formats: &[],
             format,
-            usage: wgpu::TextureUsages::SAMPLED | wgpu::TextureUsages::STORAGE,
+            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::COPY_DST,
         });
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -38,10 +33,7 @@ impl Texture {
         wgpu::BindingResource::TextureView(&self.texture_view)
     }
 
-    pub fn binding_type(
-        &self,
-        access: wgpu::StorageTextureAccess
-    ) -> wgpu::BindingType {
+    pub fn binding_type(&self, access: wgpu::StorageTextureAccess) -> wgpu::BindingType {
         wgpu::BindingType::StorageTexture {
             access,
             format: self.format,

@@ -44,14 +44,14 @@ pub trait Example: 'static + Sized {
         wgpu::Limits::downlevel_defaults() // These downlevel limits will allow the code to run on all possible hardware
     }
     fn init(
-        sc_desc: &wgpu::SwapChainDescriptor,
+        sc_desc: &wgpu::SurfaceConfiguration,
         adapter: &wgpu::Adapter,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> Self;
     fn resize(
         &mut self,
-        sc_desc: &wgpu::SwapChainDescriptor,
+        sc_desc: &wgpu::SurfaceConfiguration,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     );
@@ -85,11 +85,13 @@ async fn setup<E: Example>(title: &str) -> Setup {
     let event_loop = EventLoop::new();
     let mut builder = winit::window::WindowBuilder::new();
     builder = builder.with_title(title);
+
     #[cfg(windows_OFF)] // TODO
     {
         use winit::platform::windows::WindowBuilderExtWindows;
         builder = builder.with_no_redirection_bitmap(true);
     }
+
     let window = builder.build(&event_loop).unwrap();
 
     #[cfg(target_arch = "wasm32")]
@@ -112,15 +114,20 @@ async fn setup<E: Example>(title: &str) -> Setup {
 
     let backend = wgpu::util::backend_bits_from_env().unwrap_or(wgpu::Backends::PRIMARY);
 
-    let instance = wgpu::Instance::new(backend);
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends: backend,
+        dx12_shader_compiler: wgpu::Dx12Compiler::default(),
+    });
     let (size, surface) = unsafe {
         let size = window.inner_size();
         let surface = instance.create_surface(&window);
         (size, surface)
     };
-    let adapter = wgpu::util::initialize_adapter_from_env_or_default(&instance, backend)
-        .await
-        .expect("No suitable GPU adapters found on the system!");
+    let surface = surface.unwrap();
+    let adapter =
+        wgpu::util::initialize_adapter_from_env_or_default(&instance, backend, Some(&surface))
+            .await
+            .expect("No suitable GPU adapters found on the system!");
 
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -144,7 +151,8 @@ async fn setup<E: Example>(title: &str) -> Setup {
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
-                features: (optional_features & adapter_features) | required_features,
+                features: ((optional_features & adapter_features) | required_features)
+                    | wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
                 limits: needed_limits,
             },
             trace_dir.ok().as_ref().map(std::path::Path::new),
@@ -177,17 +185,13 @@ fn start<E: Example>(
     }: Setup,
 ) {
     let spawner = Spawner::new();
-    let mut sc_desc = wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-        format: adapter.get_swap_chain_preferred_format(&surface).unwrap(),
-        width: size.width,
-        height: size.height,
-        present_mode: wgpu::PresentMode::Mailbox,
-    };
-    let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+    let mut surface_config = surface
+        .get_default_config(&adapter, size.width, size.height)
+        .unwrap();
+    surface.configure(&device, &surface_config);
 
     log::info!("Initializing the example...");
-    let mut example = E::init(&sc_desc, &adapter, &device, &queue);
+    let mut example = E::init(&surface_config, &adapter, &device, &queue);
 
     #[cfg(not(target_arch = "wasm32"))]
     let mut last_update_inst = Instant::now();
@@ -236,10 +240,10 @@ fn start<E: Example>(
                 ..
             } => {
                 log::info!("Resizing to {:?}", size);
-                sc_desc.width = size.width.max(1);
-                sc_desc.height = size.height.max(1);
-                example.resize(&sc_desc, &device, &queue);
-                swap_chain = device.create_swap_chain(&surface, &sc_desc);
+                surface_config.width = size.width.max(1);
+                surface_config.height = size.height.max(1);
+                example.resize(&surface_config, &device, &queue);
+                surface.configure(&device, &surface_config);
             }
             event::Event::WindowEvent { event, .. } => match event {
                 WindowEvent::KeyboardInput {
@@ -285,18 +289,16 @@ fn start<E: Example>(
                         frame_count = 0;
                     }
                 }
-
-                let frame = match swap_chain.get_current_frame() {
-                    Ok(frame) => frame,
-                    Err(_) => {
-                        swap_chain = device.create_swap_chain(&surface, &sc_desc);
-                        swap_chain
-                            .get_current_frame()
-                            .expect("Failed to acquire next swap chain texture!")
-                    }
+                let current_texture = match surface.get_current_texture() {
+                    Ok(texture) => texture,
+                    Err(_) => return,
                 };
+                let view = current_texture
+                    .texture
+                    .create_view(&wgpu::TextureViewDescriptor::default());
 
-                example.render(&frame.output.view, &device, &queue, &spawner);
+                example.render(&view, &device, &queue, &spawner);
+                current_texture.present();
             }
             _ => {}
         }

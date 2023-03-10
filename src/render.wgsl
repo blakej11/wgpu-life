@@ -1,12 +1,12 @@
 struct VertexOutput {
-    [[builtin(position)]] position: vec4<f32>;
-    [[location(0)]] tex_coord: vec2<f32>;
-};
+    @builtin(position) position: vec4<f32>,
+    @location(0) tex_coord: vec2<f32>,
+}
 
-[[stage(vertex)]]
+@vertex
 fn vs_main(
-    [[location(0)]] position: vec4<f32>,
-    [[location(1)]] tex_coord: vec2<f32>,
+    @location(0) position: vec4<f32>,
+    @location(1) tex_coord: vec2<f32>,
 ) -> VertexOutput {
     var out: VertexOutput;
     out.position = position;
@@ -14,15 +14,14 @@ fn vs_main(
     return out;
 }
 
-[[block]]
 struct LifeParams {
-    width : u32;
-    height : u32;
-    threshold : f32;
-};
+    width : u32,
+    height : u32,
+    threshold : f32,
+}
 
-[[group(0), binding(0)]] var texture : [[access(read)]] texture_storage_2d<r32float>;
-[[group(0), binding(1)]] var<uniform> params : LifeParams;
+@group(0) @binding(0) var texture :  texture_storage_2d<r32float, read>;
+@group(0) @binding(1) var<uniform> params : LifeParams;
 
 fn hsv_to_rgb(hsv: vec3<f32>) -> vec3<f32> {
     let h : f32 = hsv.x * 6.0f;
@@ -40,13 +39,13 @@ fn hsv_to_rgb(hsv: vec3<f32>) -> vec3<f32> {
     var b : f32;
 
     switch (w) {
-        case 6: { fallthrough; }
-        case 0: { r = v; g = t; b = p; }
+        case 0, 6: { r = v; g = t; b = p; }
         case 1: { r = q; g = v; b = p; }
         case 2: { r = p; g = v; b = t; }
         case 3: { r = p; g = q; b = v; }
         case 4: { r = t; g = p; b = v; }
         case 5: { r = v; g = p; b = q; }
+	default: { r = v; g = p; b = q; }
     }
 
     return vec3<f32>(r, g, b);
@@ -60,16 +59,18 @@ fn render(val: f32) -> vec4<f32> {
     } else {
         let a: f32 = (val - thresh) / (1.0f - thresh);
         let b: f32 = (1.0f - a) * 0.7f;
-        return vec4<f32>(hsv_to_rgb(vec3<f32>(b, 1.0f, 1.0f)), 0.0f);
+        return vec4<f32>(hsv_to_rgb(vec3<f32>(b, 1.0f, 1.0f)), 1.0f);
+    	//return vec4<f32>(val, 0.0, 0.0, 1.0);
     }
 }
 
-[[stage(fragment)]]
-fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+@fragment
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var loadCoord: vec2<i32> = vec2<i32>(
         i32(in.tex_coord[0] * f32(params.width)),
         i32(in.tex_coord[1] * f32(params.height))
     );
     var cellValue: f32 = textureLoad(texture, loadCoord).x;
     return render(cellValue);
+    //return vec4<f32>(cellValue, 0.0, 0.0, 1.0);
 }

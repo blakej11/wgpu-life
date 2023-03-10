@@ -5,10 +5,7 @@ use bytemuck::{Pod, Zeroable};
 use std::{borrow::Cow, mem};
 use wgpu::util::DeviceExt;
 
-use crate::{
-    life_params::LifeParams,
-    texture::Texture,
-};
+use crate::{life_params::LifeParams, texture::Texture};
 
 pub struct Renderer {
     vertex_buf: wgpu::Buffer,
@@ -36,26 +33,24 @@ impl Renderer {
     fn create_vertices() -> (Vec<Vertex>, Vec<u16>) {
         let vertex_data = [
             Renderer::vertex([-1, -1], [0, 0]),
-            Renderer::vertex([ 1, -1], [1, 0]),
-            Renderer::vertex([ 1,  1], [1, 1]),
-            Renderer::vertex([-1,  1], [0, 1]),
+            Renderer::vertex([1, -1], [1, 0]),
+            Renderer::vertex([1, 1], [1, 1]),
+            Renderer::vertex([-1, 1], [0, 1]),
         ];
 
-        let index_data: &[u16] = &[
-            0, 1, 2, 2, 3, 0,
-        ];
+        let index_data: &[u16] = &[0, 1, 2, 2, 3, 0];
 
         (vertex_data.to_vec(), index_data.to_vec())
     }
 
     pub fn new(
-        sc_desc: &wgpu::SwapChainDescriptor,
+        sc_desc: &wgpu::SurfaceConfiguration,
         device: &wgpu::Device,
         params: &LifeParams,
         texture: &Texture,
     ) -> Self {
         // Load and compile the shaders.
-        let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("render.wgsl"))),
         });
@@ -110,7 +105,7 @@ impl Renderer {
         // Create the render pipeline.
         let vertex_buffers = [wgpu::VertexBufferLayout {
             array_stride: vertex_size as wgpu::BufferAddress,
-            step_mode: wgpu::InputStepMode::Vertex,
+            step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
                 wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x4,
@@ -140,7 +135,11 @@ impl Renderer {
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
                 entry_point: "fs_main",
-                targets: &[sc_desc.format.into()],
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: sc_desc.format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
             }),
             primitive: wgpu::PrimitiveState {
                 cull_mode: Some(wgpu::Face::Back),
@@ -148,6 +147,7 @@ impl Renderer {
             },
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
+            multiview: None,
         });
 
         // Done.
@@ -160,21 +160,17 @@ impl Renderer {
         }
     }
 
-    pub fn render(
-        &mut self,
-        encoder: &mut wgpu::CommandEncoder,
-        view: &wgpu::TextureView,
-    ) {
+    pub fn render(&mut self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: None,
-            color_attachments: &[wgpu::RenderPassColorAttachment {
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view,
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
                     store: true,
                 },
-            }],
+            })],
             depth_stencil_attachment: None,
         });
         rpass.push_debug_group("Prepare data for draw.");

@@ -1,22 +1,22 @@
-[[block]]
 struct LifeParams {
-    width : u32;
-    height : u32;
-    threshold : f32;
-};
+    width : u32,
+    height : u32,
+    threshold : f32,
+}
 
-[[block]]
 struct Cells {
-    cells : array<f32>;
-};
+    cells : array<f32>,
+}
 
-[[group(0), binding(0)]] var<uniform> params : LifeParams;
-[[group(0), binding(1)]] var<storage> cellSrc : [[access(read)]] Cells;
-[[group(0), binding(2)]] var<storage> cellDst : [[access(write)]] Cells;
-[[group(0), binding(3)]] var texture : [[access(write)]] texture_storage_2d<r32float>;
+@group(0) @binding(0) var<uniform> params : LifeParams;
+@group(0) @binding(1) var<storage> cellSrc :  Cells;
+// probably we can change it to write only, but we need to change description
+@group(0) @binding(2) var<storage, read_write> cellDst :  Cells;
+@group(0) @binding(3) var texture :  texture_storage_2d<r32float, write>;
 
-[[stage(compute), workgroup_size(8, 8)]]
-fn life([[builtin(global_invocation_id)]] global_id: vec3<u32>) {
+@compute 
+@workgroup_size(8, 8)
+fn life(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let X : u32 = global_id.x;
     let Y : u32 = global_id.y;
     let W : u32 = params.width;
@@ -28,8 +28,8 @@ fn life([[builtin(global_invocation_id)]] global_id: vec3<u32>) {
     }
 
     var count : i32 = 0;
-    for (var y : i32 = i32(Y - 1u32); y <= i32(Y + 1u32); y = y + 1) {
-        for (var x : i32 = i32(X - 1u32); x <= i32(X + 1u32); x = x + 1) {
+    for (var y : i32 = i32(Y - 1u); y <= i32(Y + 1u); y++ ) {
+        for (var x : i32 = i32(X - 1u); x <= i32(X + 1u); x = x + 1) {
             let yw : u32 = u32(y + i32(H)) % H;
             let xw : u32 = u32(x + i32(W)) % W;
             if (cellSrc.cells[yw * W + xw] > thresh) {

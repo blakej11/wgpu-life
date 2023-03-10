@@ -15,12 +15,8 @@ mod renderer;
 mod texture;
 
 use crate::{
-    debug_buffer::DebugBuffer,
-    dimensions::Dimensions,
-    life::Life,
-    life_params::LifeParams,
-    renderer::Renderer,
-    texture::Texture,
+    debug_buffer::DebugBuffer, dimensions::Dimensions, life::Life, life_params::LifeParams,
+    renderer::Renderer, texture::Texture,
 };
 
 // ---------------------------------------------------------------------------
@@ -35,7 +31,7 @@ struct LifeProg {
 impl framework::Example for LifeProg {
     /// Construct the initial instance of the LifeProg struct.
     fn init(
-        sc_desc: &wgpu::SwapChainDescriptor,
+        sc_desc: &wgpu::SurfaceConfiguration,
         _adapter: &wgpu::Adapter,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -44,17 +40,17 @@ impl framework::Example for LifeProg {
         let ncells = dim.area();
 
         // Parameters for the game, shared between compute and fragment shaders.
-        let params = LifeParams::new(&device, dim, 0.70);
+        let params = LifeParams::new(device, dim, 0.70);
 
         // Create the texture that's shared between compute and fragment shaders.
-        let texture = Texture::new(&device, dim, wgpu::TextureFormat::R32Float);
+        let texture = Texture::new(device, dim, wgpu::TextureFormat::R32Float);
 
         // Initialize the life algorithm.
-        let mut life = Life::new(&device, dim, &params, &texture);
+        let life = Life::new(device, dim, &params, &texture);
 
         // Set the initial state for all cells in the life grid.
-        life.import(&device, &queue, {
-            let mut cell_data : Vec<f32> = Vec::new();
+        life.import(device, queue, {
+            let mut cell_data: Vec<f32> = Vec::new();
             let mut rng = rand::rngs::StdRng::seed_from_u64(42);
             let unif = Uniform::new_inclusive(0.0, 1.0);
             for _ in 0..ncells {
@@ -64,20 +60,15 @@ impl framework::Example for LifeProg {
         });
 
         // Step the algorithm a few times, so the initial image looks Life-like.
-        let mut command_encoder =
-            device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: None
-            });
-        for _ in 0..100 {
-            life.step(&mut command_encoder);
-        }
+        let command_encoder =
+            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         queue.submit(Some(command_encoder.finish()));
 
         // Initialize the vertex and fragment shaders.
-        let renderer = Renderer::new(&sc_desc, &device, &params, &texture);
+        let renderer = Renderer::new(sc_desc, device, &params, &texture);
 
         // Create a buffer to allow snooping on the generated data.
-        let debug_buffer = DebugBuffer::new(&device, ncells);
+        let debug_buffer = DebugBuffer::new(device, ncells);
 
         LifeProg {
             life,
@@ -94,7 +85,7 @@ impl framework::Example for LifeProg {
     /// resize is called on WindowEvent::Resized events
     fn resize(
         &mut self,
-        _sc_desc: &wgpu::SwapChainDescriptor,
+        _sc_desc: &wgpu::SurfaceConfiguration,
         _device: &wgpu::Device,
         _queue: &wgpu::Queue,
     ) {
@@ -112,27 +103,25 @@ impl framework::Example for LifeProg {
         let debug = false;
 
         let mut command_encoder =
-            device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: None
-            });
+            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
         if debug {
-            self.debug_buffer.enqueue_copyin(&mut command_encoder,
-                 &self.life.src_buf());
+            self.debug_buffer
+                .enqueue_copyin(&mut command_encoder, self.life.src_buf());
         }
 
         // Run the life algorithm one step.
         self.life.step(&mut command_encoder);
 
         // Render the life cells into actual pixels, and display them.
-        self.renderer.render(&mut command_encoder, &view);
+        self.renderer.render(&mut command_encoder, view);
 
         queue.submit(Some(command_encoder.finish()));
 
         if debug {
             println!("Life data at step {}:", self.life.frame_num());
             self.debug_buffer.display(device);
-            println!("");
+            println!();
         }
     }
 }
