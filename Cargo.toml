@@ -4,24 +4,23 @@ version = "0.1.0"
 authors = ["Blake Jones <blakej@foo.net>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
+resolver = "2"
 
 # ------------------------------------------------------------------------
 
 [dependencies]
-bytemuck = { version = "1.4", features = ["derive"] }
+bytemuck = {version = "1.13.1", features = ["derive"]}
 cfg-if = "1.0.0"
 cgmath = "0.18"
 futures = "0.3"
 log = "0.4"
 rand = { version = "0.7.2", features = ["wasm-bindgen"] }
-winit = { version = "0.24", features = ["web-sys"] }
+winit = "0.28.1"
+futures-intrusive = "0.5.0"
 
-[dependencies.wgpu]
-git = "https://github.com/gfx-rs/wgpu"
-rev = "e27fbb821bb3397069d0a82ef8da8e151feb0647"
-features = ["trace"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+wgpu = "0.15.1"
 async-executor = "1.0"
 pollster = "0.2"
 env_logger = "0.8"
@@ -31,129 +30,10 @@ js-sys = "0.3.50"
 console_error_panic_hook = "0.1.6"
 console_log = "0.1.2"
 wasm-bindgen = "0.2.73"
-wasm-bindgen-futures = "0.4.23"
-web-sys = { version = "=0.3.51", features = [
+wasm-bindgen-futures = "0.4.30"
+web-sys = { version = "0.3", features = [
     "Document",
-    "Navigator",
-    "Node",
-    "NodeList",
-    "Gpu",
-    "GpuAdapter",
-    "GpuAdapterFeatures",
-    "GpuAdapterLimits",
-    "GpuAddressMode",
-    "GpuBindGroup",
-    "GpuBindGroupDescriptor",
-    "GpuBindGroupEntry",
-    "GpuBindGroupLayout",
-    "GpuBindGroupLayoutDescriptor",
-    "GpuBindGroupLayoutEntry",
-    "GpuBlendComponent",
-    "GpuBlendFactor",
-    "GpuBlendOperation",
-    "GpuBlendState",
-    "GpuBuffer",
-    "GpuBufferBinding",
-    "GpuBufferBindingLayout",
-    "GpuBufferBindingType",
-    "GpuBufferDescriptor",
-    "GpuBufferUsage",
-    "GpuCanvasContext",
-    "GpuColorDict",
-    "GpuColorTargetState",
-    "GpuColorWrite",
-    "GpuCommandBuffer",
-    "GpuCommandBufferDescriptor",
-    "GpuCommandEncoder",
-    "GpuCommandEncoderDescriptor",
-    "GpuCompareFunction",
-    "GpuCompilationInfo",
-    "GpuCompilationMessage",
-    "GpuCompilationMessageType",
-    "GpuComputePassDescriptor",
-    "GpuComputePassEncoder",
-    "GpuComputePipeline",
-    "GpuComputePipelineDescriptor",
-    "GpuCullMode",
-    "GpuDepthStencilState",
-    "GpuDevice",
-    "GpuDeviceDescriptor",
-    "GpuDeviceLostInfo",
-    "GpuDeviceLostReason",
-    "GpuErrorFilter",
-    "GpuExtent3dDict",
-    "GpuFeatureName",
-    "GpuFilterMode",
-    "GpuFragmentState",
-    "GpuFrontFace",
-    "GpuImageCopyBuffer",
-    "GpuImageCopyImageBitmap",
-    "GpuImageCopyTexture",
-    "GpuImageDataLayout",
-    "GpuIndexFormat",
-    "GpuInputStepMode",
-    "GpuLoadOp",
-    "GpuMapMode",
-    "GpuMultisampleState",
-    "GpuObjectDescriptorBase",
-    "GpuOrigin2dDict",
-    "GpuOrigin3dDict",
-    "GpuOutOfMemoryError",
-    "GpuPipelineDescriptorBase",
-    "GpuPipelineLayout",
-    "GpuPipelineLayoutDescriptor",
-    "GpuPipelineStatisticName",
-    "GpuPowerPreference",
-    "GpuPrimitiveState",
-    "GpuPrimitiveTopology",
-    "GpuProgrammableStage",
-    "GpuQuerySet",
-    "GpuQuerySetDescriptor",
-    "GpuQueryType",
-    "GpuQueue",
-    "GpuRenderBundle",
-    "GpuRenderBundleDescriptor",
-    "GpuRenderBundleEncoder",
-    "GpuRenderBundleEncoderDescriptor",
-    "GpuRenderPassColorAttachment",
-    "GpuRenderPassDepthStencilAttachment",
-    "GpuRenderPassDescriptor",
-    "GpuRenderPassEncoder",
-    "GpuRenderPipeline",
-    "GpuRenderPipelineDescriptor",
-    "GpuRequestAdapterOptions",
-    "GpuSampler",
-    "GpuSamplerBindingLayout",
-    "GpuSamplerBindingType",
-    "GpuSamplerDescriptor",
-    "GpuShaderModule",
-    "GpuShaderModuleDescriptor",
-    "GpuShaderStage",
-    "GpuStencilFaceState",
-    "GpuStencilOperation",
-    "GpuStorageTextureAccess",
-    "GpuStorageTextureBindingLayout",
-    "GpuStoreOp",
-    "GpuSwapChain",
-    "GpuSwapChainDescriptor",
-    "GpuTexture",
-    "GpuTextureAspect",
-    "GpuTextureBindingLayout",
-    "GpuTextureDescriptor",
-    "GpuTextureDimension",
-    "GpuTextureFormat",
-    "GpuTextureSampleType",
-    "GpuTextureUsage",
-    "GpuTextureView",
-    "GpuTextureViewDescriptor",
-    "GpuTextureViewDimension",
-    "GpuUncapturedErrorEvent",
-    "GpuUncapturedErrorEventInit",
-    "GpuValidationError",
-    "GpuVertexAttribute",
-    "GpuVertexBufferLayout",
-    "GpuVertexFormat",
-    "GpuVertexState",
-    "HtmlCanvasElement",
     "Window",
+    "Element",
 ]}
+wgpu = { version = "0.15.1", features = ["webgl"]}
